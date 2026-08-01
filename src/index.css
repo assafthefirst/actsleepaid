@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --color-night-950: #06060c;
+  --color-night-900: #0a0a12;
+  --color-night-800: #12121f;
+  --color-night-700: #1a1a2e;
+  --color-night-600: #252542;
+  --color-night-500: #343456;
+  --color-indigo-glow: #6366f1;
+  --color-violet-soft: #a78bfa;
+  --color-lavender: #c7d2fe;
+  --color-mist: #e0e7ff;
+  --color-warm: #fbbf24;
+  --color-sunrise: #fb923c;
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius-card: 1.25rem;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-night-900);
+  color: var(--color-mist);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-indigo-glow) 40%, transparent);
+}
+
+/* Warm night overlay applied via class on root shell */
+.night-warm::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(251, 146, 60, 0.08),
+    rgba(80, 40, 10, 0.18)
+  );
+  mix-blend-mode: multiply;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-night-500) transparent;
+}
