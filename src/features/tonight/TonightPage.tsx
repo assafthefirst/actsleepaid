@@ -1,23 +1,62 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSettings, useSettingsStore } from '@/app/settingsStore'
+import * as repo from '@/data/repo'
 import { buildTonightSchedule, nextStep, currentStep } from '@/lib/schedule'
-import { formatClock, formatDuration, isWeekend, minutesToHHMM } from '@/lib/time'
+import {
+  formatClock,
+  formatDuration,
+  isWeekend,
+  minutesToHHMM,
+  todayISODate,
+} from '@/lib/time'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { TimePicker } from '@/components/ui/TimePicker'
 import { SleepMode } from './SleepMode'
+import { PositiveThoughtsCard } from './PositiveThoughtsCard'
+
+// After this hour, always show the wind-down timeline regardless of daytime tasks.
+const WIND_DOWN_HOUR = 19
 
 export function TonightPage() {
   const settings = useSettings()
   const patch = useSettingsStore((s) => s.patch)
   const [now, setNow] = useState(() => new Date())
   const [sleepMode, setSleepMode] = useState(false)
+  const [loggedToday, setLoggedToday] = useState<boolean | null>(null)
+  const [exercisedToday, setExercisedToday] = useState(false)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    const today = todayISODate()
+    let cancelled = false
+    void Promise.all([repo.getSleepLogByDate(today), repo.listSessions(20)]).then(
+      ([log, sessions]) => {
+        if (cancelled) return
+        setLoggedToday(!!log)
+        setExercisedToday(sessions.some((s) => s.startedAt.slice(0, 10) === today))
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const logExerciseNow = async () => {
+    const iso = new Date().toISOString()
+    await repo.addSession({
+      exerciseId: 'logged-elsewhere',
+      startedAt: iso,
+      completedAt: iso,
+      durationSeconds: 0,
+    })
+    setExercisedToday(true)
+  }
 
   const weekend = settings.useWeekendSchedule && isWeekend(now)
   const bedtime = weekend ? settings.weekendBedtimeMinutes : settings.bedtimeMinutes
@@ -39,6 +78,16 @@ export function TonightPage() {
 
   const upcoming = nextStep(schedule, now)
   const current = currentStep(schedule, now)
+
+  const isDaytime = now.getHours() < WIND_DOWN_HOUR
+  const dayTask: 'log' | 'exercise' | null =
+    isDaytime && loggedToday !== null
+      ? !loggedToday
+        ? 'log'
+        : !exercisedToday
+          ? 'exercise'
+          : null
+      : null
 
   if (sleepMode) {
     return <SleepMode schedule={schedule} onExit={() => setSleepMode(false)} />
@@ -86,7 +135,39 @@ export function TonightPage() {
         </p>
       </Card>
 
-      {upcoming && (
+      {dayTask === 'log' && (
+        <Card className="ring-1 ring-indigo-glow/30">
+          <CardTitle>Next</CardTitle>
+          <p className="text-xl font-medium mt-2">Log last night</p>
+          <p className="text-sm text-lavender/60 mt-1">
+            A quick morning check-in keeps your schedule and sleep window accurate.
+          </p>
+          <Link to="/diary">
+            <Button className="mt-4">Log last night</Button>
+          </Link>
+        </Card>
+      )}
+
+      {dayTask === 'exercise' && (
+        <Card className="ring-1 ring-indigo-glow/30">
+          <CardTitle>Next</CardTitle>
+          <p className="text-xl font-medium mt-2">Do a short exercise</p>
+          <p className="text-sm text-lavender/60 mt-1">
+            Last night’s logged. A few minutes of practice during the day builds the
+            skill for when it matters most.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Link to="/exercises">
+              <Button>Do an exercise</Button>
+            </Link>
+            <Button variant="ghost" onClick={() => void logExerciseNow()}>
+              I already did one
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {dayTask === null && upcoming && (
         <Card>
           <CardTitle>Next</CardTitle>
           <p className="text-xl font-medium mt-2">{upcoming.title}</p>
@@ -100,13 +181,15 @@ export function TonightPage() {
         </Card>
       )}
 
-      {!upcoming && current && (
+      {dayTask === null && !upcoming && current && (
         <Card>
           <CardTitle>Current</CardTitle>
           <p className="text-xl font-medium mt-2">{current.title}</p>
           <p className="text-sm text-lavender/60 mt-1">{current.detail}</p>
         </Card>
       )}
+
+      <PositiveThoughtsCard />
 
       <Card>
         <CardTitle>Wind-down timeline</CardTitle>

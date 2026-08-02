@@ -75,6 +75,8 @@ export interface AppSettings {
   /** Current suggested sleep window length (Spielman titration) */
   sleepWindowMinutes: number
   values: string[]
+  /** User-added entries for the Tonight screen's helpful-thoughts card */
+  customPositiveThoughts: string[]
 }
 
 export interface SleepLog {
@@ -161,4 +163,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   alarm: { ...DEFAULT_ALARM },
   sleepWindowMinutes: 8 * 60,
   values: ['Rest', 'Presence', 'Kindness', 'Energy for what matters'],
+  customPositiveThoughts: [],
 }
