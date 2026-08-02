@@ -1,3 +1,21 @@
+import type { ThoughtLog } from '@/data/types'
+
+/**
+ * Turns a logged thought into something borrowable for the Tonight screen:
+ * the optional workable response if there is one, otherwise "what showed up"
+ * paired with the committed action.
+ */
+export function derivePositiveThought(log: ThoughtLog): string | undefined {
+  const workable = log.workableResponse?.trim()
+  if (workable) return workable
+
+  const action = log.committedAction?.trim()
+  const thought = log.thought?.trim()
+  if (thought && action) return `${thought} - ${action}`
+
+  return undefined
+}
+
 /** Grounded, borrowable thoughts for the Tonight screen — optional, not prescriptive. */
 export const DEFAULT_POSITIVE_THOUGHTS: string[] = [
   'One rough night doesn’t erase how capable I am.',
