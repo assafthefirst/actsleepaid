@@ -14,10 +14,9 @@ export function computeMetrics(log: SleepLog): SleepMetrics {
   const finalWake = new Date(log.finalWakeISO)
 
   const timeInBedMinutes = Math.max(0, diffMinutes(outOfBed, lightsOut))
-  const timeUntilWake = Math.max(0, diffMinutes(finalWake, lightsOut))
   const totalSleepMinutes = Math.max(
     0,
-    timeUntilWake - log.latencyMinutes - (log.awakeningMinutes || 0),
+    timeInBedMinutes - log.latencyMinutes - (log.awakeningMinutes || 0),
   )
   const sleepEfficiency =
     timeInBedMinutes > 0

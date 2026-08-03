@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DiaryTag, SleepLog } from '@/data/types'
 import * as repo from '@/data/repo'
 import { useSettings, useSettingsStore } from '@/app/settingsStore'
@@ -29,11 +29,92 @@ function fromLocalInput(v: string): string {
   return new Date(v).toISOString()
 }
 
+/** Returns long-press event handlers (500 ms hold) for a single element. */
+function useLongPress(onLongPress: () => void) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+  }
+  return {
+    onPointerDown: () => {
+      timer.current = setTimeout(onLongPress, 500)
+    },
+    onPointerUp: cancel,
+    onPointerLeave: cancel,
+    onPointerCancel: cancel,
+    // Desktop right-click / Android long-press
+    onContextMenu: (e: React.MouseEvent) => {
+      e.preventDefault()
+      cancel()
+      onLongPress()
+    },
+  }
+}
+
+function DiaryEntry({
+  log,
+  onEdit,
+}: {
+  log: SleepLog
+  onEdit: (log: SleepLog) => void
+}) {
+  const m = computeMetrics(log)
+  const longPress = useLongPress(() => onEdit(log))
+
+  return (
+    <Card {...longPress} className="select-none touch-manipulation">
+      <div className="flex justify-between items-start gap-2">
+        <div>
+          <p className="font-medium">{log.date}</p>
+          <p className="text-sm text-lavender/60 mt-1">
+            {formatDuration(m.totalSleepMinutes)} asleep · SE {m.sleepEfficiency}%
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(log)
+            }}
+            className="text-lavender/35 hover:text-violet-soft text-xs px-1.5 py-0.5 rounded-lg transition"
+            aria-label="Edit entry"
+          >
+            ✎
+          </button>
+          <p className="text-right text-sm text-lavender/50">
+            Q {log.quality}/5
+          </p>
+          <p className="text-right text-sm text-lavender/50">
+            Mood {log.mood}/5
+          </p>
+        </div>
+      </div>
+      {log.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {log.tags.map((t) => (
+            <span
+              key={t}
+              className="text-[11px] px-2 py-0.5 rounded-full bg-night-700 text-lavender/70"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export function DiaryPage() {
   const settings = useSettings()
   const patch = useSettingsStore((s) => s.patch)
   const [logs, setLogs] = useState<SleepLog[]>([])
   const [open, setOpen] = useState(false)
+  const [editingLog, setEditingLog] = useState<SleepLog | null>(null)
 
   const reload = async () => {
     setLogs(await repo.listSleepLogs(30))
@@ -48,6 +129,16 @@ export function DiaryPage() {
     [logs, settings.sleepWindowMinutes],
   )
 
+  const openEdit = (log: SleepLog) => {
+    setEditingLog(log)
+    setOpen(true)
+  }
+
+  const closeSheet = () => {
+    setOpen(false)
+    setEditingLog(null)
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3">
@@ -57,7 +148,7 @@ export function DiaryPage() {
             Morning check-in builds your sleep window.
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>Log night</Button>
+        <Button onClick={() => { setEditingLog(null); setOpen(true) }}>Log night</Button>
       </div>
 
       {titration && (
@@ -101,48 +192,21 @@ export function DiaryPage() {
         </Card>
       ) : (
         <ul className="space-y-3">
-          {logs.map((log) => {
-            const m = computeMetrics(log)
-            return (
-              <li key={log.id ?? log.date}>
-                <Card>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{log.date}</p>
-                      <p className="text-sm text-lavender/60 mt-1">
-                        {formatDuration(m.totalSleepMinutes)} asleep · SE{' '}
-                        {m.sleepEfficiency}%
-                      </p>
-                    </div>
-                    <div className="text-right text-sm text-lavender/50">
-                      <p>Q {log.quality}/5</p>
-                      <p>Mood {log.mood}/5</p>
-                    </div>
-                  </div>
-                  {log.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {log.tags.map((t) => (
-                        <span
-                          key={t}
-                          className="text-[11px] px-2 py-0.5 rounded-full bg-night-700 text-lavender/70"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </li>
-            )
-          })}
+          {logs.map((log) => (
+            <li key={log.id ?? log.date}>
+              <DiaryEntry log={log} onEdit={openEdit} />
+            </li>
+          ))}
         </ul>
       )}
 
       <CheckInSheet
+        key={editingLog?.id ?? 'new'}
         open={open}
-        onClose={() => setOpen(false)}
+        initialLog={editingLog ?? undefined}
+        onClose={closeSheet}
         onSaved={() => {
-          setOpen(false)
+          closeSheet()
           void reload()
         }}
       />
@@ -154,10 +218,12 @@ function CheckInSheet({
   open,
   onClose,
   onSaved,
+  initialLog,
 }: {
   open: boolean
   onClose: () => void
   onSaved: () => void
+  initialLog?: SleepLog
 }) {
   const today = todayISODate()
   const defaultLights = new Date()
@@ -166,17 +232,23 @@ function CheckInSheet({
   const defaultWake = new Date()
   defaultWake.setHours(7, 0, 0, 0)
 
-  const [date, setDate] = useState(today)
-  const [lightsOut, setLightsOut] = useState(toLocalInput(defaultLights.toISOString()))
-  const [finalWake, setFinalWake] = useState(toLocalInput(defaultWake.toISOString()))
-  const [outOfBed, setOutOfBed] = useState(toLocalInput(defaultWake.toISOString()))
-  const [latency, setLatency] = useState(15)
-  const [awakenings, setAwakenings] = useState(1)
-  const [awakeningMinutes, setAwakeningMinutes] = useState(10)
-  const [quality, setQuality] = useState(3)
-  const [mood, setMood] = useState(3)
-  const [tags, setTags] = useState<DiaryTag[]>([])
-  const [notes, setNotes] = useState('')
+  const [date, setDate] = useState(initialLog?.date ?? today)
+  const [lightsOut, setLightsOut] = useState(
+    initialLog ? toLocalInput(initialLog.lightsOutISO) : toLocalInput(defaultLights.toISOString()),
+  )
+  const [finalWake, setFinalWake] = useState(
+    initialLog ? toLocalInput(initialLog.finalWakeISO) : toLocalInput(defaultWake.toISOString()),
+  )
+  const [outOfBed, setOutOfBed] = useState(
+    initialLog ? toLocalInput(initialLog.outOfBedISO) : toLocalInput(defaultWake.toISOString()),
+  )
+  const [latency, setLatency] = useState(initialLog?.latencyMinutes ?? 15)
+  const [awakenings, setAwakenings] = useState(initialLog?.awakenings ?? 1)
+  const [awakeningMinutes, setAwakeningMinutes] = useState(initialLog?.awakeningMinutes ?? 10)
+  const [quality, setQuality] = useState(initialLog?.quality ?? 3)
+  const [mood, setMood] = useState(initialLog?.mood ?? 3)
+  const [tags, setTags] = useState<DiaryTag[]>(initialLog?.tags ?? [])
+  const [notes, setNotes] = useState(initialLog?.notes ?? '')
   const [saving, setSaving] = useState(false)
 
   const toggleTag = (t: DiaryTag) => {
@@ -187,6 +259,7 @@ function CheckInSheet({
     setSaving(true)
     try {
       await repo.upsertSleepLog({
+        id: initialLog?.id,
         date,
         lightsOutISO: fromLocalInput(lightsOut),
         finalWakeISO: fromLocalInput(finalWake),
@@ -205,18 +278,26 @@ function CheckInSheet({
     }
   }
 
+  const isEditing = !!initialLog
+
   return (
-    <Sheet open={open} onClose={onClose} title="Morning check-in">
+    <Sheet open={open} onClose={onClose} title={isEditing ? 'Edit check-in' : 'Morning check-in'}>
       <div className="space-y-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-lavender/70">Date (morning)</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="bg-night-700 border border-night-500/50 rounded-2xl px-4 py-3"
-          />
-        </label>
+        {isEditing ? (
+          <p className="text-sm text-lavender/50">
+            Editing entry for <span className="text-violet-soft">{date}</span>
+          </p>
+        ) : (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-lavender/70">Date (morning)</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="bg-night-700 border border-night-500/50 rounded-2xl px-4 py-3"
+            />
+          </label>
+        )}
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-lavender/70">Lights out</span>
           <input
@@ -315,7 +396,7 @@ function CheckInSheet({
           />
         </label>
         <Button className="w-full" onClick={() => void save()} disabled={saving}>
-          {saving ? 'Saving…' : 'Save night'}
+          {saving ? 'Saving…' : isEditing ? 'Update night' : 'Save night'}
         </Button>
       </div>
     </Sheet>

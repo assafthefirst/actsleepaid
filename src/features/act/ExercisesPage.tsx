@@ -4,7 +4,9 @@ import { Card, CardTitle } from '@/components/ui/Card'
 import { Sheet } from '@/components/ui/Sheet'
 import { Segmented } from '@/components/ui/Segmented'
 import { EXERCISES, getExercise, type Exercise } from './exercises'
+import { PATH_LESSONS, getPathLesson, type PathLesson } from './actPath'
 import { ExercisePlayer } from './ExercisePlayer'
+import { PathLessonPlayer } from './PathLessonPlayer'
 
 type Tab = 'exercises' | 'path'
 
@@ -12,23 +14,26 @@ export function ExercisesPage() {
   const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>('exercises')
   const [activeExercise, setActiveExercise] = useState<Exercise | null>(null)
+  const [activeLesson, setActiveLesson] = useState<PathLesson | null>(null)
 
   useEffect(() => {
-    const ex = params.get('exercise')
-    if (ex) {
-      const found = getExercise(ex)
-      if (found) {
-        setTab(found.category === 'path' ? 'path' : 'exercises')
-        setActiveExercise(found)
-        setParams({}, { replace: true })
+    const id = params.get('exercise')
+    if (id) {
+      const ex = getExercise(id)
+      if (ex) {
+        setTab('exercises')
+        setActiveExercise(ex)
+      } else {
+        const lesson = getPathLesson(id)
+        if (lesson) {
+          setTab('path')
+          setActiveLesson(lesson)
+        }
       }
+      setParams({}, { replace: true })
     }
   }, [params, setParams])
 
-  const pathExercises = useMemo(
-    () => EXERCISES.filter((e) => e.category === 'path'),
-    [],
-  )
   const library = useMemo(() => EXERCISES.filter((e) => e.category !== 'path'), [])
 
   return (
@@ -77,24 +82,26 @@ export function ExercisesPage() {
           <Card>
             <CardTitle>Guided ACT-I arc</CardTitle>
             <p className="text-sm text-lavender/60 mt-2 leading-relaxed">
-              Five short sessions mirroring common ACT-for-insomnia structure.
-              Go at your pace — one part per day is plenty.
+              Five story-based sessions that walk you through the core moves of
+              ACT-for-insomnia. One part per day is plenty — each ends with a
+              reflection that goes straight into your Thoughts log.
             </p>
           </Card>
-          {pathExercises.map((ex, i) => (
+          {PATH_LESSONS.map((lesson) => (
             <Card
-              key={ex.id}
+              key={lesson.id}
               className="cursor-pointer hover:border-indigo-glow/40"
-              onClick={() => setActiveExercise(ex)}
+              onClick={() => setActiveLesson(lesson)}
             >
-              <p className="text-xs text-violet-soft">Part {i + 1}</p>
-              <p className="font-medium mt-1">{ex.title}</p>
-              <p className="text-xs text-lavender/55 mt-1">{ex.summary}</p>
+              <p className="text-xs text-violet-soft">Part {lesson.part}</p>
+              <p className="font-medium mt-1">{lesson.title}</p>
+              <p className="text-xs text-lavender/55 mt-1 italic">{lesson.theme}</p>
             </Card>
           ))}
         </div>
       )}
 
+      {/* Exercise player */}
       <Sheet
         open={!!activeExercise}
         onClose={() => setActiveExercise(null)}
@@ -104,6 +111,20 @@ export function ExercisesPage() {
           <ExercisePlayer
             exercise={activeExercise}
             onClose={() => setActiveExercise(null)}
+          />
+        )}
+      </Sheet>
+
+      {/* Path lesson player */}
+      <Sheet
+        open={!!activeLesson}
+        onClose={() => setActiveLesson(null)}
+        title={activeLesson ? `Part ${activeLesson.part} · ${activeLesson.title}` : undefined}
+      >
+        {activeLesson && (
+          <PathLessonPlayer
+            lesson={activeLesson}
+            onClose={() => setActiveLesson(null)}
           />
         )}
       </Sheet>
