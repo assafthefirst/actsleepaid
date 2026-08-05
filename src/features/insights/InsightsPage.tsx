@@ -1,18 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SleepLog } from '@/data/types'
 import * as repo from '@/data/repo'
-import { useSettings } from '@/app/settingsStore'
-import {
-  bedtimeConsistencyStdDev,
-  computeMetrics,
-  rollingSleepDebt,
-} from '@/lib/sleepMath'
-import { formatDuration } from '@/lib/time'
+import { bedtimeConsistencyStdDev, computeMetrics } from '@/lib/sleepMath'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { BarChart, LineChart } from '@/components/ui/Charts'
 
 export function InsightsPage() {
-  const settings = useSettings()
   const [logs, setLogs] = useState<SleepLog[]>([])
 
   useEffect(() => {
@@ -40,13 +33,19 @@ export function InsightsPage() {
   )
 
   const consistency = bedtimeConsistencyStdDev(logs.slice(0, 14))
-  const debt = rollingSleepDebt(logs, settings.targetSleepMinutes, 14)
 
   const avgSe =
     recent.length > 0
-      ? recent.reduce((s, l) => s + computeMetrics(l).sleepEfficiency, 0) /
-        recent.length
+      ? recent.reduce((s, l) => s + computeMetrics(l).sleepEfficiency, 0) / recent.length
       : null
+
+  const avgLatency =
+    recent.length > 0
+      ? recent.reduce((s, l) => s + l.latencyMinutes, 0) / recent.length
+      : null
+
+  const latencyGood = avgLatency != null && avgLatency < 20
+  const consistencyGood = consistency != null && consistency < 20
 
   return (
     <div className="space-y-5">
@@ -66,41 +65,83 @@ export function InsightsPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
+            {/* Avg sleep efficiency */}
             <Card>
               <CardTitle>Avg efficiency</CardTitle>
               <p className="text-2xl font-semibold mt-2 tabular-nums">
-                {avgSe?.toFixed(0)}%
+                {avgSe != null ? `${avgSe.toFixed(0)}%` : '—'}
+              </p>
+              <p className="text-[11px] text-lavender/40 mt-1">
+                Time asleep ÷ time in bed
               </p>
             </Card>
+
+            {/* Avg time to fall asleep */}
             <Card>
-              <CardTitle>Sleep debt</CardTitle>
-              <p className="text-2xl font-semibold mt-2 tabular-nums">
-                {debt > 0 ? formatDuration(debt) : '0m'}
+              <CardTitle>Avg to fall asleep</CardTitle>
+              <p
+                className={`text-2xl font-semibold mt-2 tabular-nums ${
+                  avgLatency == null
+                    ? ''
+                    : latencyGood
+                      ? 'text-emerald-400'
+                      : 'text-rose-400'
+                }`}
+              >
+                {avgLatency != null ? `${Math.round(avgLatency)}m` : '—'}
               </p>
-              <p className="text-[11px] text-lavender/40 mt-1">vs target · 14d</p>
+              <p className="text-[11px] text-lavender/40 mt-1">
+                {latencyGood ? 'Under 20 min — healthy range' : avgLatency != null ? 'Over 20 min — room to improve' : ''}
+              </p>
             </Card>
+
+            {/* Bedtime consistency */}
             <Card className="col-span-2">
               <CardTitle>Bedtime consistency</CardTitle>
-              <p className="text-2xl font-semibold mt-2 tabular-nums">
+              <p
+                className={`text-2xl font-semibold mt-2 tabular-nums ${
+                  consistency == null
+                    ? ''
+                    : consistencyGood
+                      ? 'text-emerald-400'
+                      : 'text-rose-400'
+                }`}
+              >
                 {consistency == null ? '—' : `±${consistency}m`}
               </p>
               <p className="text-[11px] text-lavender/40 mt-1">
-                Std. deviation of lights-out time
+                {consistencyGood
+                  ? 'Under ±20 min — consistent rhythm'
+                  : consistency != null
+                    ? 'Over ±20 min — irregular schedule can weaken sleep drive'
+                    : 'Variation in lights-out time across nights'}
               </p>
             </Card>
           </div>
 
+          {/* Sleep duration chart */}
           <Card>
-            <CardTitle>Sleep duration (hours)</CardTitle>
+            <CardTitle>Sleep duration</CardTitle>
+            <p className="text-xs text-lavender/45 mt-0.5">
+              Hours of sleep per night · oldest on the left, most recent on the right
+            </p>
             <div className="mt-3">
-              <BarChart data={durationBars} unit="hours" />
+              <BarChart
+                data={durationBars}
+                formatValue={(v) => `${v.toFixed(1)}h`}
+              />
             </div>
           </Card>
 
+          {/* Sleep efficiency trend */}
           <Card>
             <CardTitle>Sleep efficiency trend</CardTitle>
             <div className="mt-3">
-              <LineChart data={efficiencyLine} />
+              <LineChart
+                data={efficiencyLine}
+                average={avgSe ?? undefined}
+                avgLabel={avgSe != null ? `avg ${avgSe.toFixed(0)}%` : undefined}
+              />
             </div>
             <p className="text-xs text-lavender/40 mt-2">
               ≥85% is generally considered solid. Titration lives in Diary.
