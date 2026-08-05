@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Sheet } from '@/components/ui/Sheet'
@@ -34,7 +34,7 @@ export function ExercisesPage() {
     }
   }, [params, setParams])
 
-  const library = useMemo(() => EXERCISES.filter((e) => e.category !== 'path'), [])
+  const library = EXERCISES
 
   return (
     <div className="space-y-5">
@@ -82,9 +82,10 @@ export function ExercisesPage() {
           <Card>
             <CardTitle>Guided ACT-I arc</CardTitle>
             <p className="text-sm text-lavender/60 mt-2 leading-relaxed">
-              Five story-based sessions that walk you through the core moves of
-              ACT-for-insomnia. One part per day is plenty — each ends with a
-              reflection that goes straight into your Thoughts log.
+              Six story-based sessions — starting with the science of sleep, then
+              walking through the core moves of ACT-for-insomnia. One part per day
+              is plenty — each ends with a reflection that goes straight into your
+              Thoughts log.
             </p>
           </Card>
           {PATH_LESSONS.map((lesson) => (

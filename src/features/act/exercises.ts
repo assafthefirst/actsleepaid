@@ -8,17 +8,12 @@ export type ExerciseId =
   | 'passengers-on-the-bus'
   | 'paced-breathing'
   | 'body-scan'
-  | 'path-1'
-  | 'path-2'
-  | 'path-3'
-  | 'path-4'
-  | 'path-5'
 
 export interface Exercise {
   id: ExerciseId
   title: string
   durationSeconds: number
-  category: 'defusion' | 'acceptance' | 'present' | 'values' | 'path'
+  category: 'defusion' | 'acceptance' | 'present' | 'values'
   summary: string
   steps: string[]
   breathing?: boolean
@@ -143,71 +138,6 @@ export const EXERCISES: Exercise[] = [
       'Move slowly up: legs, hips, belly, chest, arms, face.',
       'Where there’s tightness, breathe toward it — not to erase it.',
       'End with the whole body as one field of sensation.',
-    ],
-  },
-  {
-    id: 'path-1',
-    title: 'Path 1 · Giving up the struggle',
-    durationSeconds: 300,
-    category: 'path',
-    summary: 'Creative hopelessness: control strategies that backfired.',
-    steps: [
-      'List ways you’ve tried to force sleep (counting, clock-checking, alcohol, scrolling).',
-      'Honestly: what did each cost you? What did it deliver?',
-      'Notice the possibility that more control isn’t the missing piece.',
-      'Open a little to: “Maybe I can stop fighting sleep tonight.”',
-    ],
-  },
-  {
-    id: 'path-2',
-    title: 'Path 2 · Observer perspective',
-    durationSeconds: 300,
-    category: 'path',
-    summary: 'Self-as-context: you are more than tonight’s thoughts.',
-    steps: [
-      'Notice a sleep thought. Then notice the part of you that notices.',
-      'That observing vantage has been there across many nights.',
-      'Thoughts and feelings move; the observing space remains.',
-      'Rest in that space for a few breaths.',
-    ],
-  },
-  {
-    id: 'path-3',
-    title: 'Path 3 · Acceptance',
-    durationSeconds: 300,
-    category: 'path',
-    summary: 'Willingness to have wakefulness without the extra war.',
-    steps: [
-      'Invite in the sensations of being awake — even if unwanted.',
-      'Rate willingness 0–10 to have them for the next minute.',
-      'See if you can raise willingness by 1 without liking the feelings.',
-      'Willingness is a choice about struggle, not about liking insomnia.',
-    ],
-  },
-  {
-    id: 'path-4',
-    title: 'Path 4 · Defusion',
-    durationSeconds: 300,
-    category: 'path',
-    summary: 'Change your relationship to sleep thoughts.',
-    steps: [
-      'Pick a sticky thought. Repeat: “I’m having the thought that…”',
-      'Try thanking your mind, or placing it on a leaf.',
-      'Ask: if I weren’t fused with this, what would I do with my hands/eyes next?',
-      'Practice once more with a second thought.',
-    ],
-  },
-  {
-    id: 'path-5',
-    title: 'Path 5 · Values & committed action',
-    durationSeconds: 300,
-    category: 'path',
-    summary: 'Reconnect daytime life to what matters beyond sleep.',
-    steps: [
-      'Name one value that sleep serves (presence, craft, care, play).',
-      'Choose one small daytime action that expresses it — even after a rough night.',
-      'Write the action in your thought log as a committed step.',
-      'Sleep becomes a passenger; values keep the wheel.',
     ],
   },
 ]

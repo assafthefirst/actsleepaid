@@ -4,6 +4,7 @@ export type PathLessonId =
   | 'path-3'
   | 'path-4'
   | 'path-5'
+  | 'path-6'
 
 export interface PathSection {
   heading: string
@@ -24,6 +25,32 @@ export const PATH_LESSONS: PathLesson[] = [
   {
     id: 'path-1',
     part: 1,
+    title: 'How Sleep Actually Works',
+    theme: 'Sleep is biology, not a performance',
+    story: [
+      {
+        heading: 'The hourglass',
+        body: `From the moment you wake up, a molecule called adenosine begins quietly building up in your brain — a byproduct of the energy your neurons burn all day. The longer you're awake, the more it accumulates, like sand filling an hourglass. By evening, if you've been awake long enough, that pressure is substantial.\n\nThis is "sleep pressure," one of two systems that decide when you'll feel sleepy. Coffee doesn't drain the hourglass — it just blocks the sensors that detect the sand, which is often why tiredness returns all at once when it wears off.`,
+      },
+      {
+        heading: 'The internal clock',
+        body: `The second system is a roughly 24-hour clock in your brain — the circadian rhythm — that runs almost independent of how tired you feel. It's set mainly by light. When your eyes register dimming light in the evening, a signal reaches the pineal gland, which releases melatonin: a hormone that tells the rest of the body "night has started."\n\nMelatonin isn't a sedative — it doesn't knock you out. It opens a biological window during which sleep becomes easier to fall into, especially once combined with enough accumulated sleep pressure.`,
+      },
+      {
+        heading: 'Why mornings happen on their own',
+        body: `Near the end of a full night's sleep, a third player shifts: cortisol — often thought of only as a "stress hormone" — begins rising a few hours before you naturally wake. This is the cortisol awakening response, a completely normal, healthy signal that prepares your body for daytime activity.\n\nIf you've ever woken slightly before your alarm feeling alert, that's often this system doing exactly what it's built to do — not a sign that something is wrong with your sleep.`,
+      },
+      {
+        heading: `Sleep isn't something you do`,
+        body: `Put together: sleep pressure builds all day, melatonin opens a window as darkness falls, and cortisol closes the night down again in the morning. None of this requires your effort. You don't manufacture sleep the way you complete a task — you create conditions (time, darkness, a quieter nervous system), and your biology handles the rest.\n\nThis matters because so much of nighttime struggle comes from treating sleep like a project to force. It isn't. It's closer to digestion, or a cut healing — a background process that runs when you stop interfering with it. Every lesson ahead builds on exactly this idea.`,
+      },
+    ],
+    reflectionPrompt: `Knowing that sleep pressure, melatonin, and cortisol are running quietly in the background whether or not you "try" — what's one thing you've been doing that might be interfering with a process that's already built to work?`,
+    closingThought: `You don't have to make sleep happen. You only have to stop getting in its way.`,
+  },
+  {
+    id: 'path-2',
+    part: 2,
     title: 'Giving Up the Struggle',
     theme: 'The paradox of control',
     story: [
@@ -43,13 +70,17 @@ export const PATH_LESSONS: PathLesson[] = [
         heading: 'An invitation',
         body: `What if the work wasn't to try harder, but to stop fighting?\n\nNot giving up. Not accepting defeat. Just loosening the grip — even for a moment — to see what happens when you stop treating the night like something to conquer.\n\nYou don't have to believe this yet. Just hold it as a possibility.`,
       },
+      {
+        heading: 'Tonight',
+        body: `You don't have to overhaul everything at once. If you catch yourself reaching for a control strategy tonight — checking the clock, recalculating hours left, forcing your eyes shut harder — just notice it. "There's the old strategy again."\n\nYou don't need to stop it perfectly. Noticing is the whole practice for tonight.`,
+      },
     ],
     reflectionPrompt: `What sleep control strategy have you relied on most? Honestly — what has it cost you, and what has it actually delivered?`,
     closingThought: `The first move in ACT-for-sleep isn't a technique. It's noticing that control has been the direction — and wondering if there's another way.`,
   },
   {
-    id: 'path-2',
-    part: 2,
+    id: 'path-3',
+    part: 3,
     title: 'The Part That Watches',
     theme: 'You are the sky, not the weather',
     story: [
@@ -69,13 +100,17 @@ export const PATH_LESSONS: PathLesson[] = [
         heading: 'Finding the space',
         body: `Right now, notice the part of you reading these words. Not the thoughts that arise as you read — just the presence that's aware of them.\n\nIn a hard night, you can return here: "I notice I'm having these thoughts. I'm not these thoughts."\n\nThat noticing space can hold a lot without being destroyed by it.`,
       },
+      {
+        heading: 'Tonight',
+        body: `When a thought pulls you into the storm, try silently naming it: "a thought about tomorrow," "a worry about work," "a fear about not sleeping." Naming is a small way of stepping back into the room, rather than becoming the weather.\n\nYou don't need to solve the thought — just notice you're the one noticing it.`,
+      },
     ],
     reflectionPrompt: `What does "the part that watches" feel like for you? Can you sense it now — the one that has been here through every night, observing?`,
     closingThought: `The sky doesn't fight the clouds. You are the sky.`,
   },
   {
-    id: 'path-3',
-    part: 3,
+    id: 'path-4',
+    part: 4,
     title: 'The Permission',
     theme: `Acceptance isn't surrender — it's stopping the second fight`,
     story: [
@@ -95,13 +130,17 @@ export const PATH_LESSONS: PathLesson[] = [
         heading: 'The experiment',
         body: `Try this, right now: for 60 seconds, completely allow yourself to be awake. Not fighting it, not hoping it stops, not planning what to try next. Just being awake — noticing the sensations of an awake body in a quiet room.\n\nYou might notice something surprising. The body, when it stops fighting itself, often softens — not into sleep, but into rest.`,
       },
+      {
+        heading: 'Tonight',
+        body: `If sleep doesn't come quickly, try the 60-second experiment again, for real: stop trying, stop checking, and let yourself simply be awake in the dark. Not as defeat — as an experiment in reducing the second fight.\n\nSee what, if anything, softens.`,
+      },
     ],
     reflectionPrompt: `What does it feel like in your body when you stop fighting wakefulness, even briefly? What's the second fight you most often add on top of the first?`,
     closingThought: `Willingness isn't about liking the situation. It's about choosing not to add more struggle on top.`,
   },
   {
-    id: 'path-4',
-    part: 4,
+    id: 'path-5',
+    part: 5,
     title: 'The Radio',
     theme: `Defusion — changing your relationship with thoughts`,
     story: [
@@ -121,13 +160,17 @@ export const PATH_LESSONS: PathLesson[] = [
         heading: 'The noticing moment',
         body: `When the midnight radio starts: pause. Notice it: "There it is. Thanks, mind — that's the catastrophizing channel again."\n\nThen ask: what do I actually need right now, this moment? The answer is often simple: breathe, feel the bed, let the night be.\n\nThe radio may keep playing. That's allowed. You just don't have to hand it the wheel.`,
       },
+      {
+        heading: 'Tonight',
+        body: `Give your midnight radio a name if it starts broadcasting — something a little playful takes the edge off its authority. "Oh, it's the 3 a.m. Doom Report again."\n\nYou're not arguing with the broadcast or turning it off. You're just recognizing whose voice it actually is.`,
+      },
     ],
     reflectionPrompt: `What does your midnight radio broadcast most often? Can you hear it — right now — as just a voice, rather than a fact? What's the difference?`,
     closingThought: `You can't delete a thought. You can change how much of your life it drives.`,
   },
   {
-    id: 'path-5',
-    part: 5,
+    id: 'path-6',
+    part: 6,
     title: 'The Compass',
     theme: 'When sleep becomes everything',
     story: [
@@ -146,6 +189,10 @@ export const PATH_LESSONS: PathLesson[] = [
       {
         heading: `The driver's seat`,
         body: `Sleep has been in the driver's seat. Your values — what you'd want your life to be about if sleep was already fine — those are the compass.\n\nEven a small move in a valued direction on a tired day is significant. Not because it fixes sleep. Because it reclaims something insomnia has been quietly taking from you.`,
+      },
+      {
+        heading: 'Tonight',
+        body: `Before you turn off the light, name one value tomorrow could serve — regardless of how you sleep tonight. You don't need energy to remember it.\n\nYou just need to let it be the compass you check in with tomorrow, tired or not.`,
       },
     ],
     reflectionPrompt: `What's one area of your life sleep anxiety has quietly taxed most? What's one small, specific thing you could do tomorrow — regardless of tonight — that moves toward what matters?`,
