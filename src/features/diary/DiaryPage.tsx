@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import type { DiaryTag, SleepLog } from '@/data/types'
 import * as repo from '@/data/repo'
 import { useSettings, useSettingsStore } from '@/app/settingsStore'
@@ -109,12 +109,23 @@ function DiaryEntry({
   )
 }
 
+const TITRATION_DELTA = 15
+const TITRATION_MIN_MINUTES = 6 * 60
+const TITRATION_MAX_MINUTES = 10 * 60
+const TITRATION_COOLDOWN_DAYS = 7
+
+function daysSince(isoDate: string | undefined): number {
+  if (!isoDate) return Infinity
+  return (Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24)
+}
+
 export function DiaryPage() {
   const settings = useSettings()
   const patch = useSettingsStore((s) => s.patch)
   const [logs, setLogs] = useState<SleepLog[]>([])
   const [open, setOpen] = useState(false)
   const [editingLog, setEditingLog] = useState<SleepLog | null>(null)
+  const [flashMsg, setFlashMsg] = useState<string | null>(null)
 
   const reload = async () => {
     setLogs(await repo.listSleepLogs(30))
@@ -128,6 +139,32 @@ export function DiaryPage() {
     () => suggestTitration(logs, settings.sleepWindowMinutes),
     [logs, settings.sleepWindowMinutes],
   )
+
+  // Show invitation only when action is meaningful AND 7 days have passed
+  // since the user last responded (keeps showing across sessions until they do).
+  const showInvitation =
+    titration !== null &&
+    titration.action !== 'hold' &&
+    daysSince(settings.titrationLastRespondedDate) >= TITRATION_COOLDOWN_DAYS
+
+  const acceptInvitation = useCallback(() => {
+    if (!titration) return
+    const newWindow =
+      titration.action === 'shrink'
+        ? Math.max(TITRATION_MIN_MINUTES, settings.sleepWindowMinutes - TITRATION_DELTA)
+        : Math.min(TITRATION_MAX_MINUTES, settings.sleepWindowMinutes + TITRATION_DELTA)
+    const msg = `Sleep window adjusted to ${formatDuration(newWindow)}`
+    setFlashMsg(msg)
+    void patch({
+      sleepWindowMinutes: newWindow,
+      titrationLastRespondedDate: new Date().toISOString(),
+    })
+    setTimeout(() => setFlashMsg(null), 4000)
+  }, [titration, settings.sleepWindowMinutes, patch])
+
+  const declineInvitation = useCallback(() => {
+    void patch({ titrationLastRespondedDate: new Date().toISOString() })
+  }, [patch])
 
   const openEdit = (log: SleepLog) => {
     setEditingLog(log)
@@ -151,34 +188,29 @@ export function DiaryPage() {
         <Button onClick={() => { setEditingLog(null); setOpen(true) }}>Log night</Button>
       </div>
 
-      {titration && (
-        <Card className="border-indigo-glow/30">
+      {flashMsg && (
+        <div className="rounded-2xl bg-emerald-500/15 border border-emerald-500/25 px-4 py-3 text-sm text-emerald-400">
+          {flashMsg}
+        </div>
+      )}
+
+      {showInvitation && (
+        <Card className="ring-1 ring-indigo-glow/30">
           <CardTitle>Sleep window invitation</CardTitle>
           <p className="text-sm text-lavender/70 mt-2 leading-relaxed">
-            {titration.message}
+            {titration!.message}
           </p>
-          {titration.action !== 'hold' && titration.deltaMinutes > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                onClick={() => {
-                  const next =
-                    titration.action === 'shrink'
-                      ? settings.sleepWindowMinutes - titration.deltaMinutes
-                      : settings.sleepWindowMinutes + titration.deltaMinutes
-                  void patch({ sleepWindowMinutes: next })
-                }}
-              >
-                Accept ({titration.action} {titration.deltaMinutes}m)
-              </Button>
-              <Button size="sm" variant="ghost">
-                Not now
-              </Button>
-            </div>
-          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" onClick={acceptInvitation}>
+              Adjust by 15 min
+            </Button>
+            <Button size="sm" variant="ghost" onClick={declineInvitation}>
+              Not now
+            </Button>
+          </div>
           <p className="text-xs text-lavender/40 mt-3">
-            Current window {formatDuration(settings.sleepWindowMinutes)} · avg
-            efficiency {titration.averageEfficiency}%
+            Current window {formatDuration(settings.sleepWindowMinutes)} · avg efficiency{' '}
+            {titration!.averageEfficiency}% · offered at most once a week
           </p>
         </Card>
       )}

@@ -75,6 +75,8 @@ export interface AppSettings {
   /** Current suggested sleep window length (Spielman titration) */
   sleepWindowMinutes: number
   values: string[]
+  /** ISO date of the last time the user responded to a sleep-window invitation */
+  titrationLastRespondedDate?: string
 }
 
 export interface SleepLog {
