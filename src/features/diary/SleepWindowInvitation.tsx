@@ -3,7 +3,7 @@ import type { SleepLog } from '@/data/types'
 import * as repo from '@/data/repo'
 import { useSettings, useSettingsStore } from '@/app/settingsStore'
 import { suggestTitration } from '@/lib/sleepMath'
-import { formatDuration } from '@/lib/time'
+import { formatDuration, deriveWakeMinutes } from '@/lib/time'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
@@ -47,13 +47,19 @@ export function SleepWindowInvitation() {
       titration.action === 'shrink'
         ? Math.max(TITRATION_MIN_MINUTES, settings.sleepWindowMinutes - TITRATION_DELTA)
         : Math.min(TITRATION_MAX_MINUTES, settings.sleepWindowMinutes + TITRATION_DELTA)
+    const newWake = deriveWakeMinutes(settings.bedtimeMinutes, newWindow)
+    const newWeekendWake = deriveWakeMinutes(settings.weekendBedtimeMinutes, newWindow)
     setFlashMsg(`Sleep window adjusted to ${formatDuration(newWindow)}`)
     void patch({
       sleepWindowMinutes: newWindow,
+      targetSleepMinutes: newWindow,
+      wakeMinutes: newWake,
+      weekendWakeMinutes: newWeekendWake,
+      alarm: { ...settings.alarm, wakeMinutes: newWake },
       titrationLastRespondedDate: new Date().toISOString(),
     })
     setTimeout(() => setFlashMsg(null), 4000)
-  }, [titration, settings.sleepWindowMinutes, patch])
+  }, [titration, settings, patch])
 
   const decline = useCallback(() => {
     void patch({ titrationLastRespondedDate: new Date().toISOString() })

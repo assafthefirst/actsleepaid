@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { TimePicker } from '@/components/ui/TimePicker'
 import { Slider } from '@/components/ui/Slider'
-import { formatDuration } from '@/lib/time'
+import { formatDuration, deriveWakeMinutes } from '@/lib/time'
 
 const STEPS = ['welcome', 'schedule', 'act', 'safety'] as const
 
@@ -63,7 +63,10 @@ export function OnboardingPage() {
             <TimePicker
               label="Usual bedtime"
               valueMinutes={settings.bedtimeMinutes}
-              onChange={(m) => void patch({ bedtimeMinutes: m })}
+              onChange={(m) => {
+                const wake = deriveWakeMinutes(m, settings.sleepWindowMinutes)
+                void patch({ bedtimeMinutes: m, wakeMinutes: wake, alarm: { ...settings.alarm, wakeMinutes: wake } })
+              }}
             />
             <TimePicker
               label="Usual wake time"
@@ -75,15 +78,19 @@ export function OnboardingPage() {
                 })
               }
             />
+            <p className="text-[11px] text-lavender/45 -mt-2">
+              Wake auto-sets from bedtime + window — adjust freely.
+            </p>
             <Slider
               label="Target time in bed"
               value={settings.sleepWindowMinutes}
               min={300}
               max={600}
               step={15}
-              onChange={(v) =>
-                void patch({ sleepWindowMinutes: v, targetSleepMinutes: v })
-              }
+              onChange={(v) => {
+                const wake = deriveWakeMinutes(settings.bedtimeMinutes, v)
+                void patch({ sleepWindowMinutes: v, targetSleepMinutes: v, wakeMinutes: wake, alarm: { ...settings.alarm, wakeMinutes: wake } })
+              }}
               display={formatDuration(settings.sleepWindowMinutes)}
             />
             <div className="flex gap-2">

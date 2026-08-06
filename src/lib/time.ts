@@ -1,5 +1,13 @@
 /** Time helpers — minutes from midnight and formatting */
 
+/**
+ * Derives the target wake time from a given bedtime and sleep window.
+ * wake = (bedtime + window) mod 1440, e.g. 23:00 + 7h → 06:00.
+ */
+export function deriveWakeMinutes(bedtimeMinutes: number, sleepWindowMinutes: number): number {
+  return clampMinutes(bedtimeMinutes + sleepWindowMinutes)
+}
+
 export function clampMinutes(m: number): number {
   const n = ((m % (24 * 60)) + 24 * 60) % (24 * 60)
   return n

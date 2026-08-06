@@ -8,7 +8,7 @@ import { TimePicker } from '@/components/ui/TimePicker'
 import { Slider } from '@/components/ui/Slider'
 import { Segmented } from '@/components/ui/Segmented'
 import type { Chronotype, NoisePreset } from '@/data/types'
-import { formatDuration } from '@/lib/time'
+import { formatDuration, deriveWakeMinutes } from '@/lib/time'
 import { Link } from 'react-router-dom'
 import { noiseEngine } from '@/lib/audio/noise'
 import { isVoiceSupported } from '@/lib/voice'
@@ -44,7 +44,10 @@ export function SettingsPage() {
           <TimePicker
             label="Weekday bedtime"
             valueMinutes={settings.bedtimeMinutes}
-            onChange={(m) => void patch({ bedtimeMinutes: m })}
+            onChange={(m) => {
+              const wake = deriveWakeMinutes(m, settings.sleepWindowMinutes)
+              void patch({ bedtimeMinutes: m, wakeMinutes: wake, alarm: { ...settings.alarm, wakeMinutes: wake } })
+            }}
           />
           <TimePicker
             label="Weekday wake"
@@ -59,7 +62,10 @@ export function SettingsPage() {
           <TimePicker
             label="Weekend bedtime"
             valueMinutes={settings.weekendBedtimeMinutes}
-            onChange={(m) => void patch({ weekendBedtimeMinutes: m })}
+            onChange={(m) => {
+              const wake = deriveWakeMinutes(m, settings.sleepWindowMinutes)
+              void patch({ weekendBedtimeMinutes: m, weekendWakeMinutes: wake })
+            }}
           />
           <TimePicker
             label="Weekend wake"
@@ -67,6 +73,9 @@ export function SettingsPage() {
             onChange={(m) => void patch({ weekendWakeMinutes: m })}
           />
         </div>
+        <p className="text-[11px] text-lavender/40 mt-2">
+          Wake times are auto-derived from bedtime + window — tap them to override.
+        </p>
         <label className="flex items-center gap-2 mt-4 text-sm text-lavender/80">
           <input
             type="checkbox"
@@ -83,9 +92,17 @@ export function SettingsPage() {
             min={300}
             max={600}
             step={15}
-            onChange={(v) =>
-              void patch({ sleepWindowMinutes: v, targetSleepMinutes: v })
-            }
+            onChange={(v) => {
+              const wake = deriveWakeMinutes(settings.bedtimeMinutes, v)
+              const weekendWake = deriveWakeMinutes(settings.weekendBedtimeMinutes, v)
+              void patch({
+                sleepWindowMinutes: v,
+                targetSleepMinutes: v,
+                wakeMinutes: wake,
+                weekendWakeMinutes: weekendWake,
+                alarm: { ...settings.alarm, wakeMinutes: wake },
+              })
+            }}
             display={formatDuration(settings.sleepWindowMinutes)}
           />
         </div>
