@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button'
 import { TimePicker } from '@/components/ui/TimePicker'
 import { SleepMode } from './SleepMode'
 import { PositiveThoughtsCard } from './PositiveThoughtsCard'
+import { SleepWindowInvitation } from '@/features/diary/SleepWindowInvitation'
 
 // After this hour, always show the wind-down timeline regardless of daytime tasks.
 const WIND_DOWN_HOUR = 19
@@ -102,6 +103,8 @@ export function TonightPage() {
           {formatDuration(settings.sleepWindowMinutes)}
         </p>
       </div>
+
+      <SleepWindowInvitation />
 
       <Card className="bg-gradient-to-br from-night-800 to-night-700/40">
         <div className="flex flex-wrap gap-6 items-end justify-between">

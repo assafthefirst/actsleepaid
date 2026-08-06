@@ -27,11 +27,11 @@ function makeLog(
 }
 
 describe('computeMetrics', () => {
-  it('computes efficiency from time asleep / time in bed', () => {
-    // Lights out 23:00, wake 07:00, out of bed 07:15
-    // TIB = 8h15 = 495 min
-    // TST = TIB - latency - awakeningMinutes = 495 - 15 - 10 = 470 min
-    // SE = 470 / 495 ≈ 94.9%
+  it('computes efficiency from time asleep / intended sleep period', () => {
+    // Lights out 23:00, final wake 07:00, out of bed 07:15
+    // TIB = lights-out to final wake = 8h = 480 min (SE uses final wake, not out-of-bed)
+    // TST = TIB - latency - awakeningMinutes = 480 - 15 - 10 = 455 min
+    // SE = 455 / 480 ≈ 94.8%
     const metrics = computeMetrics(
       makeLog({
         lightsOutISO: '2026-07-30T23:00:00',
@@ -41,9 +41,9 @@ describe('computeMetrics', () => {
         awakeningMinutes: 10,
       }),
     )
-    expect(metrics.timeInBedMinutes).toBe(495)
-    expect(metrics.totalSleepMinutes).toBe(470)
-    expect(metrics.sleepEfficiency).toBeCloseTo(94.9, 0)
+    expect(metrics.timeInBedMinutes).toBe(480)
+    expect(metrics.totalSleepMinutes).toBe(455)
+    expect(metrics.sleepEfficiency).toBeCloseTo(94.8, 0)
   })
 })
 

@@ -39,12 +39,15 @@ export function InsightsPage() {
       ? recent.reduce((s, l) => s + computeMetrics(l).sleepEfficiency, 0) / recent.length
       : null
 
-  const avgLatency =
+  const avgPostWake =
     recent.length > 0
-      ? recent.reduce((s, l) => s + l.latencyMinutes, 0) / recent.length
+      ? recent.reduce((s, l) => {
+          const loungeMs = new Date(l.outOfBedISO).getTime() - new Date(l.finalWakeISO).getTime()
+          return s + Math.max(0, loungeMs / 60000)
+        }, 0) / recent.length
       : null
 
-  const latencyGood = avgLatency != null && avgLatency < 20
+  const postWakeGood = avgPostWake != null && avgPostWake <= 30
   const consistencyGood = consistency != null && consistency < 20
 
   return (
@@ -76,22 +79,26 @@ export function InsightsPage() {
               </p>
             </Card>
 
-            {/* Avg time to fall asleep */}
+            {/* Avg post-wake time in bed */}
             <Card>
-              <CardTitle>Avg to fall asleep</CardTitle>
+              <CardTitle>Avg lie-in after waking</CardTitle>
               <p
                 className={`text-2xl font-semibold mt-2 tabular-nums ${
-                  avgLatency == null
+                  avgPostWake == null
                     ? ''
-                    : latencyGood
+                    : postWakeGood
                       ? 'text-emerald-400'
                       : 'text-rose-400'
                 }`}
               >
-                {avgLatency != null ? `${Math.round(avgLatency)}m` : '—'}
+                {avgPostWake != null ? `${Math.round(avgPostWake)}m` : '—'}
               </p>
               <p className="text-[11px] text-lavender/40 mt-1">
-                {latencyGood ? 'Under 20 min — healthy range' : avgLatency != null ? 'Over 20 min — room to improve' : ''}
+                {postWakeGood
+                  ? 'Under 30 min — healthy'
+                  : avgPostWake != null
+                    ? 'Over 30 min — try rising closer to wake time'
+                    : 'Time from final wake to out of bed'}
               </p>
             </Card>
 

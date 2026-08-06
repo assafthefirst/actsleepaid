@@ -10,10 +10,10 @@ export interface SleepMetrics {
 
 export function computeMetrics(log: SleepLog): SleepMetrics {
   const lightsOut = new Date(log.lightsOutISO)
-  const outOfBed = new Date(log.outOfBedISO)
   const finalWake = new Date(log.finalWakeISO)
 
-  const timeInBedMinutes = Math.max(0, diffMinutes(outOfBed, lightsOut))
+  // SE denominator = lights-out to final wake (intended sleep period, not time to get up)
+  const timeInBedMinutes = Math.max(0, diffMinutes(finalWake, lightsOut))
   const totalSleepMinutes = Math.max(
     0,
     timeInBedMinutes - log.latencyMinutes - (log.awakeningMinutes || 0),
