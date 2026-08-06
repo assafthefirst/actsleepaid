@@ -12,7 +12,10 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Do NOT cancel an in-flight deploy: killing it mid-poll can leave the Pages
+  # backend "wedged" on that deployment for up to 10 minutes, which then makes
+  # the *next* deploy time out too. Let each run queue and finish instead.
+  cancel-in-progress: false
 
 jobs:
   build:
