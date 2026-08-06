@@ -125,17 +125,3 @@ export function bedtimeConsistencyStdDev(logs: SleepLog[]): number | null {
   return Math.round(Math.sqrt(variance))
 }
 
-export function rollingSleepDebt(
-  logs: SleepLog[],
-  targetMinutes: number,
-  days = 14,
-): number {
-  const recent = logs.slice(0, days)
-  if (!recent.length) return 0
-  const total = recent.reduce(
-    (sum, l) => sum + computeMetrics(l).totalSleepMinutes,
-    0,
-  )
-  const expected = targetMinutes * recent.length
-  return Math.round(expected - total)
-}

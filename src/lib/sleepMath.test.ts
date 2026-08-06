@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  computeMetrics,
-  rollingSleepDebt,
-  suggestTitration,
-} from './sleepMath'
+import { computeMetrics, suggestTitration } from './sleepMath'
 import type { SleepLog } from '@/data/types'
 
 function makeLog(
@@ -106,19 +102,3 @@ describe('suggestTitration', () => {
   })
 })
 
-describe('rollingSleepDebt', () => {
-  it('sums shortfall vs target', () => {
-    const logs = [
-      makeLog({
-        date: '2026-07-31',
-        lightsOutISO: '2026-07-30T23:00:00',
-        finalWakeISO: '2026-07-31T06:00:00',
-        outOfBedISO: '2026-07-31T06:00:00',
-        latencyMinutes: 0,
-        awakeningMinutes: 0,
-      }),
-    ]
-    // 7h sleep vs 8h target → 60 min debt
-    expect(rollingSleepDebt(logs, 8 * 60, 14)).toBe(60)
-  })
-})
