@@ -284,21 +284,34 @@ export function SettingsPage() {
             }
           />
         </div>
-        <div className="mt-4">
-          <Slider
-            label="Sleep timer fade-out"
-            value={settings.noiseFadeOutMinutes}
-            min={0}
-            max={120}
-            step={5}
-            onChange={(v) => void patch({ noiseFadeOutMinutes: v })}
-            display={
-              settings.noiseFadeOutMinutes === 0
-                ? 'Off'
-                : `${settings.noiseFadeOutMinutes}m`
+        <label className="flex items-center gap-2 mt-4 text-sm">
+          <input
+            type="checkbox"
+            checked={settings.noiseFadeOutMinutes === 0}
+            onChange={(e) =>
+              void patch({ noiseFadeOutMinutes: e.target.checked ? 0 : 45 })
             }
+            className="accent-indigo-glow"
           />
-        </div>
+          Play all night (no fade-out)
+        </label>
+        {settings.noiseFadeOutMinutes === 0 ? (
+          <p className="text-xs text-lavender/40 mt-2">
+            Sound keeps playing until you stop it or the alarm rings.
+          </p>
+        ) : (
+          <div className="mt-4">
+            <Slider
+              label="Sleep timer fade-out"
+              value={settings.noiseFadeOutMinutes}
+              min={5}
+              max={120}
+              step={5}
+              onChange={(v) => void patch({ noiseFadeOutMinutes: v })}
+              display={`${settings.noiseFadeOutMinutes}m`}
+            />
+          </div>
+        )}
       </Card>
 
       <Card>

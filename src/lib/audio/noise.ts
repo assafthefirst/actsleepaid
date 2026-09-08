@@ -243,7 +243,7 @@ export class NoiseEngine {
     }
   }
 
-  /** Fade out after `minutes`, optionally starting from lights-out */
+  /** Fade out after `minutes`. `0` (or less) means play indefinitely — no timer is scheduled. */
   scheduleFadeOut(minutes: number) {
     this.clearSleepTimer()
     if (minutes <= 0) return
@@ -260,6 +260,11 @@ export class NoiseEngine {
       clearTimeout(this.sleepTimer)
       this.sleepTimer = null
     }
+  }
+
+  /** Re-resume the audio context if the OS/browser suspended it (e.g. tab was backgrounded). */
+  resume() {
+    if (this._playing && this.ctx?.state === 'suspended') void this.ctx.resume()
   }
 
   dispose() {

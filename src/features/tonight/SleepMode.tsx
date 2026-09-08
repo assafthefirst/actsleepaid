@@ -1,14 +1,45 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TonightSchedule } from '@/lib/schedule'
 import { currentStep, nextStep } from '@/lib/schedule'
-import { formatClock } from '@/lib/time'
 import { useSettings, useSettingsStore } from '@/app/settingsStore'
 import { noiseEngine } from '@/lib/audio/noise'
-import { smartAlarm } from '@/lib/alarm/smartAlarm'
+import { alarmAudio } from '@/lib/audio/alarm'
+import { smartAlarm, type AlarmPhase } from '@/lib/alarm/smartAlarm'
+import { wakeLockController } from '@/lib/wakeLock'
 import type { NoisePreset } from '@/data/types'
 import { Button } from '@/components/ui/Button'
 import { Slider } from '@/components/ui/Slider'
 import { Link } from 'react-router-dom'
+
+/**
+ * ACT-friendly copy: we deliberately never show the literal clock while
+ * trying to sleep. Watching the time invites the mind to start calculating
+ * ("it's 2:47, I only have 4h left...") which fuels sleep-related anxiety.
+ */
+function sleepModeCopy(phase: AlarmPhase): { title: string; subtitle: string } {
+  switch (phase) {
+    case 'ringing':
+      return {
+        title: 'Time to get up',
+        subtitle: 'Gently waking you now — take your time.',
+      }
+    case 'window':
+      return {
+        title: 'Time to get up soon',
+        subtitle: "Your wake window is open. It's fine to get up now if you're ready.",
+      }
+    case 'snoozed':
+      return {
+        title: 'A few more minutes',
+        subtitle: "We'll check back gently soon.",
+      }
+    default:
+      return {
+        title: 'Sleep time',
+        subtitle: "No need to watch the clock — we'll wake you gently within your window.",
+      }
+  }
+}
 
 type Props = {
   schedule: TonightSchedule
@@ -35,7 +66,9 @@ export function SleepMode({ schedule, onExit }: Props) {
   const autoStarted = useRef(false)
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000)
+    // Only needed to advance the wind-down step list — no literal clock is shown,
+    // so a coarse interval is enough and easier on battery.
+    const id = setInterval(() => setNow(new Date()), 30_000)
     return () => clearInterval(id)
   }, [])
 
@@ -44,6 +77,22 @@ export function SleepMode({ schedule, onExit }: Props) {
       setAlarmPhase(s.phase)
       setSunrise(s.sunriseProgress)
     })
+  }, [])
+
+  // Keep the screen awake for as long as Sleep Mode is open, and nudge the
+  // audio contexts back awake if the OS suspended them while backgrounded.
+  useEffect(() => {
+    void wakeLockController.acquire()
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      noiseEngine.resume()
+      alarmAudio.resume()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      void wakeLockController.release()
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   useEffect(() => {
@@ -119,11 +168,16 @@ export function SleepMode({ schedule, onExit }: Props) {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-6">
-        <p className="text-6xl sm:text-7xl font-light tabular-nums tracking-tight">
-          {formatClock(now)}
-        </p>
+        <div className="max-w-xs">
+          <p className="text-4xl sm:text-5xl font-light tracking-tight">
+            {sleepModeCopy(alarmPhase).title}
+          </p>
+          <p className="text-sm text-lavender/50 mt-2">
+            {sleepModeCopy(alarmPhase).subtitle}
+          </p>
+        </div>
 
-        {step && (
+        {step && alarmPhase !== 'ringing' && (
           <div>
             <p className="text-xs uppercase tracking-widest text-violet-soft/70">
               {step.at.getTime() <= now.getTime() ? 'Now' : 'Next'}
@@ -134,11 +188,6 @@ export function SleepMode({ schedule, onExit }: Props) {
             </p>
           </div>
         )}
-
-        <p className="text-sm text-lavender/45">
-          Wake window {formatClock(schedule.wake.windowStart)} –{' '}
-          {formatClock(schedule.wake.windowEnd)}
-        </p>
 
         {alarmPhase === 'ringing' && (
           <div className="flex gap-3">
@@ -236,8 +285,9 @@ export function SleepMode({ schedule, onExit }: Props) {
       </div>
 
       <p className="text-center text-[11px] text-lavender/35 px-6 pb-6 leading-relaxed">
-        Keep this tab open and your screen awake for the alarm. Set a backup phone
-        alarm until a native build exists. This is a self-help tool, not medical advice.
+        This screen keeps your device awake while open. Keep the tab open for the
+        alarm to ring, and set a backup phone alarm until a native build exists.
+        This is a self-help tool, not medical advice.
       </p>
     </div>
   )

@@ -24,7 +24,6 @@ export class SmartAlarm {
   private windowStart: number | null = null
   private config: AlarmConfig | null = null
   private listeners = new Set<AlarmListener>()
-  private wakeLock: WakeLockSentinel | null = null
   private restlessnessArmed = false
   private audioLevel = 0
   private motionLevel = 0
@@ -78,7 +77,6 @@ export class SmartAlarm {
       fireAt: this.fireAt,
     })
 
-    await this.requestWakeLock()
     this.emit()
   }
 
@@ -161,30 +159,11 @@ export class SmartAlarm {
       clearInterval(this.sunriseId)
       this.sunriseId = null
     }
-    this.releaseWakeLock()
     this.phase = 'idle'
     this.fireAt = null
     this.windowStart = null
     this.sunriseProgress = 0
     this.emit()
-  }
-
-  private async requestWakeLock() {
-    try {
-      if ('wakeLock' in navigator) {
-        this.wakeLock = await navigator.wakeLock.request('screen')
-        this.wakeLock.addEventListener('release', () => {
-          this.wakeLock = null
-        })
-      }
-    } catch {
-      /* unsupported or denied */
-    }
-  }
-
-  private releaseWakeLock() {
-    void this.wakeLock?.release()
-    this.wakeLock = null
   }
 
   private async startRestlessnessMonitor() {

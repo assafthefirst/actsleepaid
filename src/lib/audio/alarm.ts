@@ -43,6 +43,11 @@ export class AlarmAudio {
     this._volume = Math.max(0, Math.min(1, v))
   }
 
+  /** Re-resume the audio context if the OS/browser suspended it (e.g. tab was backgrounded). */
+  resume() {
+    if (this.ctx?.state === 'suspended') void this.ctx.resume()
+  }
+
   /** Start gentle two-tone ramp over rampSeconds */
   start(rampSeconds: number) {
     const ctx = this.ensure()
