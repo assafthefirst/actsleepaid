@@ -77,6 +77,8 @@ export interface AppSettings {
   values: string[]
   /** ISO date of the last time the user responded to a sleep-window invitation */
   titrationLastRespondedDate?: string
+  /** Wind-down step ids removed from tonight's timeline (long-press or Settings) */
+  hiddenWindDownSteps: WindDownStepId[]
 }
 
 export interface SleepLog {
@@ -163,4 +165,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   alarm: { ...DEFAULT_ALARM },
   sleepWindowMinutes: 8 * 60,
   values: ['Rest', 'Presence', 'Kindness', 'Energy for what matters'],
+  hiddenWindDownSteps: [],
 }

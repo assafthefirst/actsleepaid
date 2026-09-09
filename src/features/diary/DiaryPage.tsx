@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { DiaryTag, SleepLog } from '@/data/types'
 import * as repo from '@/data/repo'
+import { useSettings } from '@/app/settingsStore'
 import { computeMetrics } from '@/lib/sleepMath'
-import { todayISODate, formatDuration } from '@/lib/time'
+import { todayISODate, formatDuration, suggestLightsOutDate } from '@/lib/time'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Slider } from '@/components/ui/Slider'
 import { Sheet } from '@/components/ui/Sheet'
+import { useLongPress } from '@/lib/useLongPress'
 import { SleepWindowInvitation } from './SleepWindowInvitation'
 
 const TAGS: { id: DiaryTag; label: string }[] = [
@@ -27,31 +29,6 @@ function toLocalInput(iso: string): string {
 
 function fromLocalInput(v: string): string {
   return new Date(v).toISOString()
-}
-
-/** Returns long-press event handlers (500 ms hold) for a single element. */
-function useLongPress(onLongPress: () => void) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const cancel = () => {
-    if (timer.current) {
-      clearTimeout(timer.current)
-      timer.current = null
-    }
-  }
-  return {
-    onPointerDown: () => {
-      timer.current = setTimeout(onLongPress, 500)
-    },
-    onPointerUp: cancel,
-    onPointerLeave: cancel,
-    onPointerCancel: cancel,
-    // Desktop right-click / Android long-press
-    onContextMenu: (e: React.MouseEvent) => {
-      e.preventDefault()
-      cancel()
-      onLongPress()
-    },
-  }
 }
 
 function DiaryEntry({
@@ -188,17 +165,20 @@ function CheckInSheet({
   onSaved: () => void
   initialLog?: SleepLog
 }) {
+  const settings = useSettings()
   const today = todayISODate()
-  const defaultLights = new Date()
-  defaultLights.setDate(defaultLights.getDate() - 1)
-  defaultLights.setHours(23, 0, 0, 0)
   const defaultWake = new Date()
   defaultWake.setHours(7, 0, 0, 0)
 
   const [date, setDate] = useState(initialLog?.date ?? today)
   const [lightsOut, setLightsOut] = useState(
-    initialLog ? toLocalInput(initialLog.lightsOutISO) : toLocalInput(defaultLights.toISOString()),
+    initialLog
+      ? toLocalInput(initialLog.lightsOutISO)
+      : toLocalInput(suggestLightsOutDate(today, settings.bedtimeMinutes).toISOString()),
   )
+  // Tracks whether the user has touched the field, so the async refinement
+  // below (using the last logged bedtime hour) never clobbers their input.
+  const lightsOutTouched = useRef(false)
   const [finalWake, setFinalWake] = useState(
     initialLog ? toLocalInput(initialLog.finalWakeISO) : toLocalInput(defaultWake.toISOString()),
   )
@@ -213,6 +193,20 @@ function CheckInSheet({
   const [tags, setTags] = useState<DiaryTag[]>(initialLog?.tags ?? [])
   const [notes, setNotes] = useState(initialLog?.notes ?? '')
   const [saving, setSaving] = useState(false)
+
+  // For a brand-new entry, suggest "lights out" using the hour of the most
+  // recently logged night (falls back to the settings bedtime set above if
+  // there's no history yet).
+  useEffect(() => {
+    if (initialLog) return
+    void repo.listSleepLogs(1).then(([recent]) => {
+      if (!recent || lightsOutTouched.current) return
+      const recentTime = new Date(recent.lightsOutISO)
+      const minutesOfDay = recentTime.getHours() * 60 + recentTime.getMinutes()
+      setLightsOut(toLocalInput(suggestLightsOutDate(date, minutesOfDay).toISOString()))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const toggleTag = (t: DiaryTag) => {
     setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
@@ -266,7 +260,10 @@ function CheckInSheet({
           <input
             type="datetime-local"
             value={lightsOut}
-            onChange={(e) => setLightsOut(e.target.value)}
+            onChange={(e) => {
+              lightsOutTouched.current = true
+              setLightsOut(e.target.value)
+            }}
             className="bg-night-700 border border-night-500/50 rounded-2xl px-4 py-3"
           />
         </label>

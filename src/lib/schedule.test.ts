@@ -7,11 +7,11 @@ import {
 } from './schedule'
 
 describe('caffeineLeadHours', () => {
-  it('scales by dose', () => {
+  it('is a flat 8h cutoff whenever caffeine is consumed', () => {
     expect(caffeineLeadHours(0)).toBe(0)
-    expect(caffeineLeadHours(50)).toBe(4)
-    expect(caffeineLeadHours(107)).toBe(8.8)
-    expect(caffeineLeadHours(218)).toBe(13.2)
+    expect(caffeineLeadHours(50)).toBe(8)
+    expect(caffeineLeadHours(107)).toBe(8)
+    expect(caffeineLeadHours(218)).toBe(8)
   })
 })
 
@@ -34,8 +34,14 @@ describe('buildTonightSchedule', () => {
 
     const caffeine = schedule.windDown.find((s) => s.id === 'caffeine')
     expect(caffeine).toBeTruthy()
-    // 8.8h before 23:00 ≈ 14:12
-    expect(caffeine!.leadMinutes).toBe(Math.round(8.8 * 60))
+    // 8h before 23:00 = 15:00
+    expect(caffeine!.leadMinutes).toBe(8 * 60)
+
+    const meal = schedule.windDown.find((s) => s.id === 'meal')
+    expect(meal!.leadMinutes).toBe(210) // 3.5h
+
+    const alcohol = schedule.windDown.find((s) => s.id === 'alcohol')
+    expect(alcohol!.leadMinutes).toBe(180) // 3h
 
     const screens = schedule.windDown.find((s) => s.id === 'screens_off')
     expect(screens!.label).toBe('22:00')
@@ -52,6 +58,22 @@ describe('buildTonightSchedule', () => {
     // mid = 23:00 + 15 + 480 = 07:15 next day
     expect(schedule.wake.mid.getHours()).toBe(7)
     expect(schedule.wake.mid.getMinutes()).toBe(15)
+  })
+
+  it('filters out hidden wind-down steps', () => {
+    const schedule = buildTonightSchedule({
+      bedtimeMinutes: 23 * 60,
+      wakeMinutes: 7 * 60,
+      targetSleepMinutes: 8 * 60,
+      expectedLatencyMinutes: 15,
+      caffeineDoseMg: 107,
+      chronotype: 'intermediate',
+      hiddenWindDownSteps: ['caffeine', 'hot_shower'],
+      now: new Date('2026-07-31T12:00:00'),
+    })
+    expect(schedule.windDown.find((s) => s.id === 'caffeine')).toBeUndefined()
+    expect(schedule.windDown.find((s) => s.id === 'hot_shower')).toBeUndefined()
+    expect(schedule.windDown.find((s) => s.id === 'lights_out')).toBeTruthy()
   })
 
   it('orders steps by lead time descending', () => {

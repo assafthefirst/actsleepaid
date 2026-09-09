@@ -10,6 +10,8 @@ export interface ScheduleInput {
   chronotype: Chronotype
   /** Reference "now" for computing absolute times */
   now?: Date
+  /** Wind-down step ids the user removed from tonight's timeline */
+  hiddenWindDownSteps?: WindDownStepId[]
 }
 
 export interface WindDownStep {
@@ -40,12 +42,9 @@ export interface TonightSchedule {
   wakeLabel: string
 }
 
-/** Caffeine cutoff hours before bed, scaled by dose (Gardiner et al. SMR 2023) */
+/** Caffeine cutoff: stop about 8 h before bed so it has time to clear. */
 export function caffeineLeadHours(doseMg: number): number {
-  if (doseMg >= 180) return 13.2
-  if (doseMg >= 80) return 8.8
-  if (doseMg > 0) return 4
-  return 0
+  return doseMg > 0 ? 8 : 0
 }
 
 function chronotypeShift(chronotype: Chronotype): number {
@@ -69,10 +68,7 @@ export function buildWindDownDefs(caffeineDoseMg: number): StepDef[] {
     steps.push({
       id: 'caffeine',
       title: 'Caffeine cutoff',
-      detail:
-        caffeineDoseMg >= 180
-          ? 'Higher doses (pre-workout range) clear slowly — stop ~13 h before bed.'
-          : 'Typical coffee (~100 mg) still affects sleep ~9 h later.',
+      detail: `Caffeine's half-life is long enough that even an afternoon coffee can affect sleep — stop about 8 h before bed.`,
       leadMinutes: Math.round(caffeineHours * 60),
     })
   }
@@ -87,15 +83,14 @@ export function buildWindDownDefs(caffeineDoseMg: number): StepDef[] {
     {
       id: 'meal',
       title: 'Last large meal',
-      detail: 'Leave ~3–4 h so digestion doesn’t fragment sleep.',
-      leadMinutes: 180,
+      detail: `Leave about 3.5 h so digestion doesn't fragment sleep.`,
+      leadMinutes: 210,
     },
     {
       id: 'alcohol',
       title: 'Alcohol cutoff',
-      detail:
-        'Harm-reduction guidance: stop 3–4 h before bed. Even small amounts reduce REM.',
-      leadMinutes: 210,
+      detail: 'Harm-reduction guidance: stop about 3 h before bed. Even small amounts reduce REM.',
+      leadMinutes: 180,
     },
     {
       id: 'dim_lights',
@@ -140,6 +135,20 @@ export function buildWindDownDefs(caffeineDoseMg: number): StepDef[] {
   return steps.sort((a, b) => b.leadMinutes - a.leadMinutes)
 }
 
+/** Closed pool of wind-down items a user can show/hide (Settings + long-press). */
+export const WIND_DOWN_CATALOG: { id: WindDownStepId; title: string }[] = [
+  { id: 'caffeine', title: 'Caffeine cutoff' },
+  { id: 'exercise', title: 'Finish intense exercise' },
+  { id: 'meal', title: 'Last large meal' },
+  { id: 'alcohol', title: 'Alcohol cutoff' },
+  { id: 'dim_lights', title: 'Dim ambient lights' },
+  { id: 'warm_content', title: 'Warm, calm screens' },
+  { id: 'hot_shower', title: 'Hot shower or bath' },
+  { id: 'screens_off', title: 'Screens off' },
+  { id: 'noise_on', title: 'Start sleep sounds' },
+  { id: 'lights_out', title: 'Lights out' },
+]
+
 export function buildTonightSchedule(input: ScheduleInput): TonightSchedule {
   const now = input.now ?? new Date()
   const shift = chronotypeShift(input.chronotype)
@@ -153,7 +162,8 @@ export function buildTonightSchedule(input: ScheduleInput): TonightSchedule {
   if (hoursDiff < -12) lightsOut.setDate(lightsOut.getDate() + 1)
   else if (hoursDiff > 18) lightsOut.setDate(lightsOut.getDate() - 1)
 
-  const defs = buildWindDownDefs(input.caffeineDoseMg)
+  const hidden = input.hiddenWindDownSteps ?? []
+  const defs = buildWindDownDefs(input.caffeineDoseMg).filter((d) => !hidden.includes(d.id))
   const windDown: WindDownStep[] = defs.map((d) => {
     const at = addMinutes(lightsOut, -d.leadMinutes)
     const minutesFromMidnight = at.getHours() * 60 + at.getMinutes()

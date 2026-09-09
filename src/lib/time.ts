@@ -72,3 +72,26 @@ export function isWeekend(d = new Date()): boolean {
   const day = d.getDay()
   return day === 0 || day === 6
 }
+
+/**
+ * Suggests the lights-out Date for a diary entry covering the night before
+ * `morningDateISO` (YYYY-MM-DD), given only a time-of-day (`minutesOfDay`).
+ *
+ * A bedtime time-of-day is ambiguous on its own: 23:00 belongs to the
+ * evening *before* the morning being logged, but 00:30 (after-midnight
+ * bedtime) belongs to the morning date itself. We use a noon cutoff to
+ * decide which calendar day the time-of-day falls on.
+ */
+export function suggestLightsOutDate(morningDateISO: string, minutesOfDay: number): Date {
+  const [y, m, d] = morningDateISO.split('-').map(Number)
+  const date = new Date(y, (m || 1) - 1, d || 1)
+  const NOON = 12 * 60
+  const clamped = clampMinutes(minutesOfDay)
+  if (clamped >= NOON) {
+    // Typical PM bedtime — belongs to the evening before the morning date.
+    date.setDate(date.getDate() - 1)
+  }
+  // Otherwise it's an after-midnight bedtime — same calendar date as the morning.
+  date.setHours(Math.floor(clamped / 60), clamped % 60, 0, 0)
+  return date
+}

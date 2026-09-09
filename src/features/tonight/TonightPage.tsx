@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSettings, useSettingsStore } from '@/app/settingsStore'
 import * as repo from '@/data/repo'
-import { buildTonightSchedule, nextStep, currentStep } from '@/lib/schedule'
+import { buildTonightSchedule, nextStep, currentStep, type WindDownStep } from '@/lib/schedule'
 import {
   formatClock,
   formatDuration,
@@ -10,12 +10,47 @@ import {
   minutesToHHMM,
   todayISODate,
 } from '@/lib/time'
+import { useLongPress } from '@/lib/useLongPress'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { TimePicker } from '@/components/ui/TimePicker'
 import { SleepMode } from './SleepMode'
 import { PositiveThoughtsCard } from './PositiveThoughtsCard'
 import { SleepWindowInvitation } from '@/features/diary/SleepWindowInvitation'
+
+function WindDownStepItem({
+  step,
+  done,
+  isNext,
+  onRemove,
+}: {
+  step: WindDownStep
+  done: boolean
+  isNext: boolean
+  onRemove: () => void
+}) {
+  const longPress = useLongPress(onRemove)
+  return (
+    <li
+      {...longPress}
+      className={`select-none touch-manipulation flex gap-3 items-start rounded-2xl px-3 py-2.5 ${
+        isNext
+          ? 'bg-indigo-glow/15 ring-1 ring-indigo-glow/40'
+          : done
+            ? 'opacity-45'
+            : 'bg-night-700/30'
+      }`}
+    >
+      <span className="tabular-nums text-sm text-violet-soft w-12 shrink-0 pt-0.5">
+        {step.label}
+      </span>
+      <div>
+        <p className="text-sm font-medium">{step.title}</p>
+        <p className="text-xs text-lavender/55 mt-0.5 leading-relaxed">{step.detail}</p>
+      </div>
+    </li>
+  )
+}
 
 // After this hour, always show the wind-down timeline regardless of daytime tasks.
 const WIND_DOWN_HOUR = 19
@@ -72,6 +107,7 @@ export function TonightPage() {
         expectedLatencyMinutes: settings.expectedLatencyMinutes,
         caffeineDoseMg: settings.caffeineDoseMg,
         chronotype: settings.chronotype,
+        hiddenWindDownSteps: settings.hiddenWindDownSteps,
         now,
       }),
     [bedtime, wake, settings, now],
@@ -197,33 +233,29 @@ export function TonightPage() {
       <Card>
         <CardTitle>Wind-down timeline</CardTitle>
         <ol className="mt-4 space-y-3">
-          {schedule.windDown.map((step) => {
-            const done = step.at.getTime() <= now.getTime()
-            const isNext = upcoming?.id === step.id
-            return (
-              <li
-                key={step.id}
-                className={`flex gap-3 items-start rounded-2xl px-3 py-2.5 ${
-                  isNext
-                    ? 'bg-indigo-glow/15 ring-1 ring-indigo-glow/40'
-                    : done
-                      ? 'opacity-45'
-                      : 'bg-night-700/30'
-                }`}
-              >
-                <span className="tabular-nums text-sm text-violet-soft w-12 shrink-0 pt-0.5">
-                  {step.label}
-                </span>
-                <div>
-                  <p className="text-sm font-medium">{step.title}</p>
-                  <p className="text-xs text-lavender/55 mt-0.5 leading-relaxed">
-                    {step.detail}
-                  </p>
-                </div>
-              </li>
-            )
-          })}
+          {schedule.windDown.map((step) => (
+            <WindDownStepItem
+              key={step.id}
+              step={step}
+              done={step.at.getTime() <= now.getTime()}
+              isNext={upcoming?.id === step.id}
+              onRemove={() => {
+                const ok = window.confirm(
+                  `Remove "${step.title}" from tonight's wind-down timeline? You can bring it back anytime in Settings.`,
+                )
+                if (!ok) return
+                void patch({
+                  hiddenWindDownSteps: Array.from(
+                    new Set([...settings.hiddenWindDownSteps, step.id]),
+                  ),
+                })
+              }}
+            />
+          ))}
         </ol>
+        <p className="text-[11px] text-lavender/40 mt-3">
+          Long-press an item to remove it. Add items back anytime in Settings.
+        </p>
       </Card>
 
       <Card>

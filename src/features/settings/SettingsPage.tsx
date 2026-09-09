@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/Slider'
 import { Segmented } from '@/components/ui/Segmented'
 import type { Chronotype, NoisePreset } from '@/data/types'
 import { formatDuration, deriveWakeMinutes } from '@/lib/time'
+import { WIND_DOWN_CATALOG } from '@/lib/schedule'
 import { Link } from 'react-router-dom'
 import { noiseEngine } from '@/lib/audio/noise'
 import { isVoiceSupported } from '@/lib/voice'
@@ -142,6 +143,36 @@ export function SettingsPage() {
           <p className="text-xs text-lavender/40 mt-1">
             Coffee ~100 mg · pre-workout often 200+. Scales the caffeine cutoff.
           </p>
+        </div>
+      </Card>
+
+      <Card>
+        <CardTitle>Wind-down timeline</CardTitle>
+        <p className="text-xs text-lavender/50 mt-2">
+          Choose which reminders show up in tonight's wind-down timeline. You can
+          also long-press any item on the Tonight screen to remove it.
+        </p>
+        <div className="mt-4 space-y-2">
+          {WIND_DOWN_CATALOG.map((item) => {
+            const hidden = settings.hiddenWindDownSteps.includes(item.id)
+            return (
+              <label key={item.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!hidden}
+                  onChange={(e) =>
+                    void patch({
+                      hiddenWindDownSteps: e.target.checked
+                        ? settings.hiddenWindDownSteps.filter((id) => id !== item.id)
+                        : [...settings.hiddenWindDownSteps, item.id],
+                    })
+                  }
+                  className="accent-indigo-glow"
+                />
+                {item.title}
+              </label>
+            )
+          })}
         </div>
       </Card>
 
