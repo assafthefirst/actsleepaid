@@ -94,6 +94,17 @@ export function TonightPage() {
     setExercisedToday(true)
   }
 
+  // Record the actual enter/exit times so the Diary can suggest "lights out"
+  // and "final wake" from what really happened, not just a guess.
+  const enterSleepMode = () => {
+    void patch({ lastSleepModeEnteredAt: new Date().toISOString() })
+    setSleepMode(true)
+  }
+  const exitSleepMode = () => {
+    void patch({ lastSleepModeExitedAt: new Date().toISOString() })
+    setSleepMode(false)
+  }
+
   const weekend = settings.useWeekendSchedule && isWeekend(now)
   const bedtime = weekend ? settings.weekendBedtimeMinutes : settings.bedtimeMinutes
   const wake = weekend ? settings.weekendWakeMinutes : settings.wakeMinutes
@@ -127,7 +138,7 @@ export function TonightPage() {
       : null
 
   if (sleepMode) {
-    return <SleepMode schedule={schedule} onExit={() => setSleepMode(false)} />
+    return <SleepMode schedule={schedule} onExit={exitSleepMode} />
   }
 
   return (
@@ -165,7 +176,7 @@ export function TonightPage() {
           {schedule.wake.note}
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Button onClick={() => setSleepMode(true)} size="lg">
+          <Button onClick={enterSleepMode} size="lg">
             Enter Sleep Mode
           </Button>
         </div>

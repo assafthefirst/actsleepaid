@@ -79,6 +79,10 @@ export interface AppSettings {
   titrationLastRespondedDate?: string
   /** Wind-down step ids removed from tonight's timeline (long-press or Settings) */
   hiddenWindDownSteps: WindDownStepId[]
+  /** ISO timestamp of the last time Sleep Mode was entered — used to suggest "lights out" in the diary */
+  lastSleepModeEnteredAt?: string
+  /** ISO timestamp of the last time Sleep Mode was exited — used to suggest "final wake" in the diary */
+  lastSleepModeExitedAt?: string
 }
 
 export interface SleepLog {

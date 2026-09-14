@@ -39,6 +39,14 @@ export function InsightsPage() {
       ? recent.reduce((s, l) => s + computeMetrics(l).sleepEfficiency, 0) / recent.length
       : null
 
+  // Zoom the efficiency chart's y-axis into the range where the data actually
+  // lives (top pinned at 100%, bottom 20% below the lowest point shown) so
+  // night-to-night changes are visible instead of flattened against 0–100%.
+  const efficiencyChartMin =
+    efficiencyLine.length > 0
+      ? Math.max(0, Math.floor(Math.min(...efficiencyLine.map((d) => d.value)) * 0.8))
+      : 0
+
   const avgPostWake =
     recent.length > 0
       ? recent.reduce((s, l) => {
@@ -148,10 +156,14 @@ export function InsightsPage() {
                 data={efficiencyLine}
                 average={avgSe ?? undefined}
                 avgLabel={avgSe != null ? `avg ${avgSe.toFixed(0)}%` : undefined}
+                min={efficiencyChartMin}
+                max={100}
               />
             </div>
             <p className="text-xs text-lavender/40 mt-2">
-              ≥85% is generally considered solid. Titration lives in Diary.
+              ≥85% is generally considered solid. Titration lives in Diary. Axis is
+              zoomed to {efficiencyChartMin}–100% to make night-to-night changes easier
+              to see.
             </p>
           </Card>
         </>

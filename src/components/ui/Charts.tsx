@@ -72,18 +72,23 @@ export function LineChart({
   avgLabel,
   height = 100,
   className = '',
+  min: minProp,
+  max: maxProp,
 }: {
   data: LinePoint[]
   average?: number
   avgLabel?: string
   height?: number
   className?: string
+  /** Override the auto-computed y-axis floor/ceiling (e.g. to zoom into a range). */
+  min?: number
+  max?: number
 }) {
   if (data.length === 0) return null
 
   const width = Math.max(data.length * 40, 120)
-  const max = Math.max(...data.map((d) => d.value), average ?? 0, 1)
-  const min = Math.min(...data.map((d) => d.value), average ?? Infinity, 0)
+  const max = maxProp ?? Math.max(...data.map((d) => d.value), average ?? 0, 1)
+  const min = minProp ?? Math.min(...data.map((d) => d.value), average ?? Infinity, 0)
   const range = Math.max(max - min, 1)
 
   const py = (v: number) => height - ((v - min) / range) * (height - 16) - 8

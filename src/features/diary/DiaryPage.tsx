@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { DiaryTag, SleepLog } from '@/data/types'
 import * as repo from '@/data/repo'
 import { useSettings } from '@/app/settingsStore'
@@ -167,24 +167,20 @@ function CheckInSheet({
 }) {
   const settings = useSettings()
   const today = todayISODate()
-  const defaultWake = new Date()
-  defaultWake.setHours(7, 0, 0, 0)
 
   const [date, setDate] = useState(initialLog?.date ?? today)
   const [lightsOut, setLightsOut] = useState(
-    initialLog
-      ? toLocalInput(initialLog.lightsOutISO)
-      : toLocalInput(suggestLightsOutDate(today, settings.bedtimeMinutes).toISOString()),
+    initialLog ? toLocalInput(initialLog.lightsOutISO) : '',
   )
-  // Tracks whether the user has touched the field, so the async refinement
-  // below (using the last logged bedtime hour) never clobbers their input.
-  const lightsOutTouched = useRef(false)
   const [finalWake, setFinalWake] = useState(
-    initialLog ? toLocalInput(initialLog.finalWakeISO) : toLocalInput(defaultWake.toISOString()),
+    initialLog ? toLocalInput(initialLog.finalWakeISO) : '',
   )
   const [outOfBed, setOutOfBed] = useState(
-    initialLog ? toLocalInput(initialLog.outOfBedISO) : toLocalInput(defaultWake.toISOString()),
+    initialLog ? toLocalInput(initialLog.outOfBedISO) : '',
   )
+  // Tracks whether the user has touched this field, so the async suggestion
+  // below (looking up the last logged night) never clobbers their input.
+  const lightsOutTouched = useRef(false)
   const [latency, setLatency] = useState(initialLog?.latencyMinutes ?? 15)
   const [awakenings, setAwakenings] = useState(initialLog?.awakenings ?? 1)
   const [awakeningMinutes, setAwakeningMinutes] = useState(initialLog?.awakeningMinutes ?? 10)
@@ -194,19 +190,52 @@ function CheckInSheet({
   const [notes, setNotes] = useState(initialLog?.notes ?? '')
   const [saving, setSaving] = useState(false)
 
-  // For a brand-new entry, suggest "lights out" using the hour of the most
-  // recently logged night (falls back to the settings bedtime set above if
-  // there's no history yet).
-  useEffect(() => {
-    if (initialLog) return
-    void repo.listSleepLogs(1).then(([recent]) => {
-      if (!recent || lightsOutTouched.current) return
-      const recentTime = new Date(recent.lightsOutISO)
-      const minutesOfDay = recentTime.getHours() * 60 + recentTime.getMinutes()
-      setLightsOut(toLocalInput(suggestLightsOutDate(date, minutesOfDay).toISOString()))
-    })
+  // Suggest fresh defaults every time the sheet opens for a brand-new entry
+  // (the sheet component itself isn't remounted between openings, so this
+  // can't just be a useState initializer — it needs to re-run on each open).
+  // Preference order: the real times Sleep Mode was last entered/exited
+  // (most accurate), then the hour from the most recently logged night,
+  // then the Settings bedtime/wake targets.
+  useLayoutEffect(() => {
+    if (!open || initialLog) return
+    lightsOutTouched.current = false
+    const freshToday = todayISODate()
+    setDate(freshToday)
+
+    const hoursAgo = (iso: string) => (Date.now() - new Date(iso).getTime()) / 3_600_000
+    const enteredAt = settings.lastSleepModeEnteredAt
+    const exitedAt = settings.lastSleepModeExitedAt
+    const enteredUsable = !!enteredAt && hoursAgo(enteredAt) >= 0 && hoursAgo(enteredAt) < 20
+    const exitedUsable =
+      !!exitedAt &&
+      enteredUsable &&
+      new Date(exitedAt).getTime() > new Date(enteredAt!).getTime() &&
+      hoursAgo(exitedAt) >= 0 &&
+      hoursAgo(exitedAt) < 16
+
+    if (enteredUsable) {
+      setLightsOut(toLocalInput(enteredAt!))
+    } else {
+      setLightsOut(toLocalInput(suggestLightsOutDate(freshToday, settings.bedtimeMinutes).toISOString()))
+      void repo.listSleepLogs(1).then(([recent]) => {
+        if (!recent || lightsOutTouched.current) return
+        const recentTime = new Date(recent.lightsOutISO)
+        const minutesOfDay = recentTime.getHours() * 60 + recentTime.getMinutes()
+        setLightsOut(toLocalInput(suggestLightsOutDate(freshToday, minutesOfDay).toISOString()))
+      })
+    }
+
+    if (exitedUsable) {
+      setFinalWake(toLocalInput(exitedAt!))
+      setOutOfBed(toLocalInput(exitedAt!))
+    } else {
+      const wake = new Date()
+      wake.setHours(Math.floor(settings.wakeMinutes / 60), settings.wakeMinutes % 60, 0, 0)
+      setFinalWake(toLocalInput(wake.toISOString()))
+      setOutOfBed(toLocalInput(wake.toISOString()))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [open, initialLog])
 
   const toggleTag = (t: DiaryTag) => {
     setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
