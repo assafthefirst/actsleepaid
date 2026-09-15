@@ -95,20 +95,49 @@ export function SleepMode({ schedule, onExit }: Props) {
     }
   }, [])
 
+  // Arm alarm for tonight's wake target. `schedule.wake.mid` is a Date
+  // object that TonightPage recreates every 30s (its own clock tick) and
+  // `settings` is a new object on every store patch — using either directly
+  // as an effect dependency caused this to disarm/re-arm on every tick and
+  // on unrelated setting changes (e.g. adjusting volume), which reset the
+  // alarm's volume ramp back to silent and, right around wake time, could
+  // even push the target to the next day. Depend on the underlying
+  // primitive values instead so this only re-arms when they actually change.
+  const wakeMinutes = schedule.wake.mid.getHours() * 60 + schedule.wake.mid.getMinutes()
+  const {
+    enabled: alarmEnabled,
+    windowMinutes: alarmWindowMinutes,
+    rampMinutes: alarmRampMinutes,
+    snoozeMinutes: alarmSnoozeMinutes,
+    experimentalRestlessness: alarmExperimentalRestlessness,
+    volume: alarmVolume,
+  } = settings.alarm
+
   useEffect(() => {
-    // Arm alarm for tonight's wake target
-    const cfg = {
-      ...settings.alarm,
-      wakeMinutes:
-        schedule.wake.mid.getHours() * 60 + schedule.wake.mid.getMinutes(),
-    }
-    void smartAlarm.arm(cfg)
+    void smartAlarm.arm({
+      enabled: alarmEnabled,
+      windowMinutes: alarmWindowMinutes,
+      rampMinutes: alarmRampMinutes,
+      snoozeMinutes: alarmSnoozeMinutes,
+      experimentalRestlessness: alarmExperimentalRestlessness,
+      volume: alarmVolume,
+      wakeMinutes,
+    })
     return () => {
       void smartAlarm.disarm()
     }
-  }, [settings.alarm, schedule.wake.mid])
+  }, [
+    wakeMinutes,
+    alarmEnabled,
+    alarmWindowMinutes,
+    alarmRampMinutes,
+    alarmSnoozeMinutes,
+    alarmExperimentalRestlessness,
+    alarmVolume,
+  ])
 
-  // Sleep sounds default to on (brown noise, audible) as soon as Sleep Mode opens.
+  // Sleep sounds default to on (brown noise, audible) as soon as Sleep Mode opens,
+  // and stop as soon as Sleep Mode is exited so they don't linger afterward.
   useEffect(() => {
     if (autoStarted.current) return
     autoStarted.current = true
@@ -120,6 +149,9 @@ export function SleepMode({ schedule, onExit }: Props) {
       })
     } else {
       setNoiseOn(noiseEngine.playing)
+    }
+    return () => {
+      void noiseEngine.stop()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
